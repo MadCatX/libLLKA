@@ -1982,6 +1982,8 @@ EMSCRIPTEN_BINDINGS(LLKA)
         _EMX_CLS_MTH(std::vector<std::string>, LLKA::ClassifiedStep, namedViolations)
     ;
 
+    _EMX_MK_RCRESULT(LLKA::ClassifiedStep);
+
     emscripten::value_object<LLKA::AttemptedClassifiedStep>("AttemptedClassifiedStep")
         _EMX_VOF(status, LLKA::AttemptedClassifiedStep)
         _EMX_VOF(step, LLKA::AttemptedClassifiedStep)
