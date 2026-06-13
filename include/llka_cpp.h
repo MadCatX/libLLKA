@@ -236,7 +236,6 @@ private:
     bool m_isSuccess;
     bool m_movedAway;
 };
-template <typename S> using RCResult = Result<S, LLKA_RetCode>;
 
 template <typename F>
 class Result<void, F> {
@@ -304,7 +303,7 @@ public:
 
         if (m_isSuccess)
             throw std::runtime_error{"Cannot get failed value for a succesful result"};
-        return failure;
+        return m_failure;
     }
 
     bool isSuccess() const
@@ -426,11 +425,84 @@ private:
     bool m_movedAway;
 };
 
+template <typename S> using RCResult = Result<S, LLKA_RetCode>;
+
 //
 // Main
 //
 
 using Points = std::vector<LLKA_Point>; // TODO: Revise this when we figure out how to do memory alignment of point arrays
+
+class Matrix {
+public:
+    explicit Matrix(LLKA_Matrix matrix) noexcept :
+        nCols{matrix.nCols},
+        nRows{matrix.nRows},
+        data{matrix.data}
+    {
+    }
+
+    explicit Matrix(double *data, size_t nRows, size_t nCols) noexcept :
+        nCols{nCols},
+        nRows{nRows},
+        data{data}
+    {
+    }
+
+    // Impl is in llka_cpp.cpp
+    Matrix(const Matrix &other) noexcept;
+
+    Matrix(Matrix &&other) noexcept :
+        nCols{other.nCols},
+        nRows{other.nRows},
+        data{other.data}
+    {
+        other.data = nullptr;
+    }
+
+    // Impl is in llka_cpp.cpp
+    ~Matrix() noexcept;
+
+    const size_t nCols;
+    const size_t nRows;
+
+    operator LLKA_Matrix() noexcept
+    {
+        LLKA_Matrix m{ data, nRows, nCols };
+        return m;
+    }
+
+    operator const LLKA_Matrix() const noexcept
+    {
+        LLKA_Matrix m{ data, nRows, nCols };
+        return m;
+    }
+
+    auto operator()(size_t row, size_t col) noexcept -> double
+    {
+        assert(row < nRows && col < nCols && "Attempted to get a matrix element that is outside the matrix dimensions");
+
+        return data[nRows * col + row];
+    }
+
+    // Impl is in llka_cpp.cpp
+    auto operator=(const Matrix &other) noexcept -> Matrix;
+
+    auto operator=(Matrix &&other) noexcept -> Matrix
+    {
+        const_cast<size_t&>(this->nCols) = other.nCols;
+        const_cast<size_t&>(this->nRows) = other.nRows;
+        this->data = other.data;
+
+        other.data = nullptr;
+
+        return *this;
+    }
+
+private:
+    double *data;
+
+};
 
 LLKA_CPP_API
 auto operator<<(std::ostream &os, const LLKA_Point &pt) -> std::ostream &;
@@ -573,6 +645,12 @@ auto measureDistance(const Atom &a, const Atom &b) -> T;
 //
 
 LLKA_CPP_API
+auto applyTransformation(Points &what, const Matrix &matrix) noexcept -> RCResult<void>;
+
+LLKA_CPP_API
+auto applyTransformation(Structure &what, const Matrix &matrix) noexcept -> RCResult<void>;
+
+LLKA_CPP_API
 auto centroid(const Points &points) noexcept -> LLKA_Point;
 
 LLKA_CPP_API
@@ -589,6 +667,15 @@ auto superpose(Points &what, const Points &onto) noexcept -> RCResult<double>;
 
 LLKA_CPP_API
 auto superpose(Structure &what, const Structure &onto) noexcept -> RCResult<double>;
+
+LLKA_CPP_API
+auto superpositionMatrix(Structure &what, const Structure &onto) noexcept -> RCResult<Matrix>;
+
+LLKA_CPP_API
+auto superpositionMatrix(Points &what, const Points &onto) noexcept -> RCResult<Matrix>;
+
+LLKA_CPP_API
+auto superpositionMatrix(StructureView &what, const StructureView &onto) noexcept -> RCResult<Matrix>;
 
 //
 // Segmentation
