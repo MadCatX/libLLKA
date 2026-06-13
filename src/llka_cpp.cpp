@@ -747,6 +747,15 @@ auto NtCToName(LLKA_NtC ntc) noexcept -> std::string
     return LLKA_NtCToName(ntc);
 }
 
+auto NtCStructure(LLKA_NtC ntc) noexcept -> Structure
+{
+    auto cStru = LLKA_NtCStructure(ntc);
+    auto stru = makeStructure(cStru.atoms, cStru.nAtoms);
+    LLKA_destroyStructure(&cStru);
+
+    return stru;
+}
+
 auto structureIsStep(const Structure &stru) noexcept -> RCResult<LLKA_StepInfo>
 {
     const auto wStru = helpers::struToWrappedCStru(stru);

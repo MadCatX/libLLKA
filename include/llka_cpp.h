@@ -762,6 +762,9 @@ auto nameToNtC(const std::string &name) noexcept -> LLKA_NtC;
 LLKA_CPP_API
 auto NtCToName(LLKA_NtC ntc) noexcept -> std::string;
 
+LLKA_CPP_API
+auto NtCStructure(LLKA_NtC ntc) noexcept -> Structure;
+
 using StepInfo = LLKA_StepInfo;
 LLKA_CPP_API
 auto structureIsStep(const Structure &stru) noexcept -> RCResult<LLKA_StepInfo>;
@@ -1530,6 +1533,7 @@ EMSCRIPTEN_BINDINGS(LLKA)
     emscripten::function("CANAToName", &LLKA::CANAToName);
     emscripten::function("nameToNtC", &LLKA::nameToNtC);
     emscripten::function("NtCToName", &LLKA::NtCToName);
+    emscripten::function("NtCStructure", &LLKA::NtCStructure);
     emscripten::function("structureIsStep", &LLKA::structureIsStep);
 
     //
