@@ -30,7 +30,7 @@ using AtomSite = Schema<
 	TagValue<"label_atom_id", LLKA_AtomSetter<const char *, &LLKA_Atom::label_atom_id>>,
 	TagValue<"label_entity_id", LLKA_AtomSetter<const char *, &LLKA_Atom::label_entity_id>>,
 	TagValue<"label_comp_id", LLKA_AtomSetter<const char *, &LLKA_Atom::label_comp_id>>,
-	TagValue<"label_asym_id", LLKA_AtomSetter<const char *, &LLKA_Atom::label_asym_id>>,
+	TagValue<"label_asym_id", LLKA_AtomSetter<const char *, &LLKA_Atom::label_asym_id>, DefaultValue<const char *, nullptr>>, // Fix up later
 	TagValue<"auth_atom_id", LLKA_AtomSetter<const char *, &LLKA_Atom::auth_atom_id>, DefaultValue<const char *, nullptr>>, // Fix up later
 	TagValue<"auth_comp_id", LLKA_AtomSetter<const char *, &LLKA_Atom::auth_comp_id>, DefaultValue<const char *, nullptr>>, // Fix up later
 	TagValue<"auth_asym_id", LLKA_AtomSetter<const char *, &LLKA_Atom::auth_asym_id>, DefaultValue<const char *, nullptr>>, // Fix up later

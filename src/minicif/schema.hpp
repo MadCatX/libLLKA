@@ -222,11 +222,22 @@ private:
 
 public:
 	template <typename FixerUpper, typename Releaser>
-	static auto apply(const Block &block, FixerUpper fixerUpper = NoopFixup<typename Schema::Image>, Releaser releaseItem = NoopRelease<typename Schema::Image>)
+	static auto apply(
+		const Block &block,
+		FixerUpper fixerUpper = NoopFixup<typename Schema::Image>,
+		Releaser releaseItem = NoopRelease<typename Schema::Image>,
+		bool allowNoCategory = false
+	)
 	{
 		auto catIt = std::find_if(block.categories.cbegin(), block.categories.cend(), [](const Category &c) { return c.lowecaseName == Schema::name; });
-		if (catIt == block.categories.cend())
+		if (catIt == block.categories.cend()) {
+			if (allowNoCategory) {
+				auto items = std::unique_ptr<typename Schema::Image[]>(nullptr);
+				return std::make_tuple(std::move(items), size_t{0});
+			}
+
 			throw CifSchemaError{"Category " + std::string{Schema::name} + " is not present in block " + block.name};
+		}
 
 		const auto &cat = *catIt;
 

@@ -7,8 +7,9 @@
 
 /*! Flags that control import behavior. */
 enum {
-    LLKA_MINICIF_NORMALIZE   = (1 << 0),    /*!< Attempt to sort imported structure by model, chain and sequence id */
-    LLKA_MINICIF_GET_CIFDATA = (1 << 1)     /*!< Export complete processed Cif data */
+    LLKA_MINICIF_NORMALIZE               = (1 << 0),    /*!< Attempt to sort imported structure by model, chain and sequence id */
+    LLKA_MINICIF_GET_CIFDATA             = (1 << 1),    /*!< Export complete processed Cif data */
+    LLKA_MINICIF_ALLOW_NO_ENTRY_CATEGORY = (1 << 2)     /*!< Tolerate Cif data that do not have any "entry" categories */
 };
 
 typedef struct LLKA_CifData LLKA_CifData;

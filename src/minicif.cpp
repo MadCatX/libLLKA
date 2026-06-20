@@ -174,16 +174,26 @@ auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedS
 
         // TODO: We should look into the potential memory leaks here if we get unexpected data
 
-        auto [ entires, nEntries ] = LLKAInternal::MiniCif::Applier<LLKAInternal::MiniCif::Categories::Entry>::apply(
+        auto [ entries, nEntries ] = LLKAInternal::MiniCif::Applier<LLKAInternal::MiniCif::Categories::Entry>::apply(
             blocks[0],
             NoopFixup<LLKA_StructureEntry>,
-            [](const LLKA_StructureEntry &e) { LLKAInternal::destroyString(e.id);
-        });
+            [](const LLKA_StructureEntry &e) { LLKAInternal::destroyString(e.id); },
+            (options & LLKA_MINICIF_ALLOW_NO_ENTRY_CATEGORY) > 0
+        );
 
-        if (nEntries < 1)
-            return LLKA_E_BAD_DATA;
+        const char *entryId;
+        if (nEntries < 1) {
+            if (!(options & LLKA_MINICIF_ALLOW_NO_ENTRY_CATEGORY))
+                return LLKA_E_BAD_DATA;
+
+            entryId = LLKAInternal::duplicateString("");
+        } else {
+            entryId = entries[0].id;
+        }
 
         auto fixupAtom = [](LLKA_Atom &atom) {
+            if (atom.label_asym_id == nullptr)
+                atom.label_asym_id = LLKAInternal::duplicateString("");
             if (atom.auth_atom_id == nullptr)
                 atom.auth_atom_id = LLKAInternal::duplicateString(atom.label_atom_id);
             if (atom.auth_comp_id == nullptr)
@@ -202,7 +212,7 @@ auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedS
         if (options & LLKA_MINICIF_NORMALIZE)
             LLKAInternal::MiniCif::normalize(atoms, nAtoms);
 
-        importedStru->entry.id = entires[0].id;
+        importedStru->entry.id = entryId;
         importedStru->structure.atoms = atoms.release();
         importedStru->structure.nAtoms = nAtoms;
 
@@ -215,6 +225,12 @@ auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedS
 
         return LLKA_OK;
     } catch (const LLKAInternal::MiniCif::CifParseError &ex) {
+        const auto len = std::strlen(ex.what());
+        *error = new char[len + 1];
+        std::strcpy(*error, ex.what());
+
+        return LLKA_E_BAD_DATA;
+    } catch (const LLKAInternal::MiniCif::CifSchemaError &ex) {
         const auto len = std::strlen(ex.what());
         *error = new char[len + 1];
         std::strcpy(*error, ex.what());
