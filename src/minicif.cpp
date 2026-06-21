@@ -236,6 +236,8 @@ auto processAtomSiteAllowBroken(const std::vector<MiniCif::Block> &blocks)
 static
 auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedStru, char **error, int32_t options)
 {
+    std::memset(importedStru, 0, sizeof(LLKA_ImportedStructure));
+
     try {
         auto blocks = parse(view);
 
@@ -248,14 +250,13 @@ auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedS
             (options & LLKA_MINICIF_ALLOW_NO_ENTRY_CATEGORY) > 0
         );
 
-        const char *entryId;
         if (nEntries < 1) {
             if (!(options & LLKA_MINICIF_ALLOW_NO_ENTRY_CATEGORY))
                 return LLKA_E_BAD_DATA;
 
-            entryId = LLKAInternal::duplicateString("");
+            importedStru->entry.id = LLKAInternal::duplicateString("");
         } else {
-            entryId = entries[0].id;
+            importedStru->entry.id = entries[0].id;
         }
 
         bool allowBrokenAtomSite = options & LLKA_MINICIF_ALLOW_BROKEN_ATOMSITE;
@@ -267,7 +268,6 @@ auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedS
         if (options & LLKA_MINICIF_NORMALIZE)
             LLKAInternal::MiniCif::normalize(atoms, nAtoms);
 
-        importedStru->entry.id = entryId;
         importedStru->structure.atoms = atoms.release();
         importedStru->structure.nAtoms = nAtoms;
 
@@ -280,12 +280,16 @@ auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedS
 
         return LLKA_OK;
     } catch (const LLKAInternal::MiniCif::CifParseError &ex) {
+        LLKA_destroyString(importedStru->entry.id);
+
         const auto len = std::strlen(ex.what());
         *error = new char[len + 1];
         std::strcpy(*error, ex.what());
 
         return LLKA_E_BAD_DATA;
     } catch (const LLKAInternal::MiniCif::CifSchemaError &ex) {
+        LLKA_destroyString(importedStru->entry.id);
+
         const auto len = std::strlen(ex.what());
         *error = new char[len + 1];
         std::strcpy(*error, ex.what());

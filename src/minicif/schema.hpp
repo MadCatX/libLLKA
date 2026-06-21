@@ -229,6 +229,8 @@ public:
 		bool allowNoCategory = false
 	)
 	{
+		LLKA_IS_POD(typename Schema::Image);
+
 		auto catIt = std::find_if(block.categories.cbegin(), block.categories.cend(), [](const Category &c) { return c.lowecaseName == Schema::name; });
 		if (catIt == block.categories.cend()) {
 			if (allowNoCategory) {
@@ -251,6 +253,10 @@ public:
 			throw CifSchemaError{"Category contains no values"};
 
 		auto items = std::unique_ptr<typename Schema::Image[]>(new typename Schema::Image[NRows]);
+		// We require that all items initialized by the Schema processor are PODs, default initialization
+		// by zeroizing should not be a problem. We need to default-init the returned items so that
+		// we can release a partially processed item.
+		std::memset(items.get(), 0, sizeof(typename Schema::Image) * NRows);
 
 		size_t row = 0;
 		try {
@@ -262,7 +268,9 @@ public:
 			return std::make_tuple(std::move(items), NRows);
 		} catch (const CifSchemaError &ex) {
 			// Unwind
-			for (size_t uwdx = 0; uwdx < row; uwdx++)
+			//
+			// the <= is correct because we also need to free a partially-processed item
+			for (size_t uwdx = 0; uwdx <= row; uwdx++)
 				releaseItem(items[uwdx]);
 
 			throw ex;
