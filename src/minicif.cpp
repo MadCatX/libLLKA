@@ -167,6 +167,73 @@ auto toCifData(const std::vector<Block> &blocks)
 }
 
 static
+auto processAtomSite(const std::vector<MiniCif::Block> &blocks)
+{
+    auto fixupAtom = [](LLKA_Atom &atom) {
+        if (atom.auth_atom_id == nullptr)
+            atom.auth_atom_id = LLKAInternal::duplicateString(atom.label_atom_id);
+        if (atom.auth_comp_id == nullptr)
+            atom.auth_comp_id = LLKAInternal::duplicateString(atom.label_comp_id);
+        if (atom.auth_asym_id == nullptr)
+            atom.auth_asym_id = LLKAInternal::duplicateString(atom.label_asym_id);
+        if (atom.pdbx_PDB_ins_code == nullptr)
+            atom.pdbx_PDB_ins_code = LLKAInternal::duplicateString(LLKA_NO_INSCODE);
+    };
+
+    return LLKAInternal::MiniCif::Applier<LLKAInternal::MiniCif::Categories::AtomSite>::apply(
+        blocks[0],
+        fixupAtom,
+        [](const LLKA_Atom &atom) { LLKA_destroyAtom(&atom); }
+    );
+}
+
+static
+auto processAtomSiteAllowBroken(const std::vector<MiniCif::Block> &blocks)
+{
+    auto fixupAtom = [](LLKA_Atom &atom) {
+        // If we have data in the auth_ fields but not in the label_ fields,
+        // copy the data from auth_ to label_. Otherwise just keep the label_
+        // fields empty, even though this pretty much renders the resulting
+        // structure unusable
+        if (atom.label_atom_id == nullptr) {
+            if (atom.auth_atom_id == nullptr) {
+                atom.auth_atom_id = LLKAInternal::duplicateString("");
+            }
+            atom.label_atom_id = LLKAInternal::duplicateString(atom.auth_atom_id);
+        }
+        if (atom.label_comp_id == nullptr) {
+            if (atom.auth_comp_id == nullptr) {
+                atom.auth_comp_id = LLKAInternal::duplicateString("");
+            }
+            atom.label_comp_id = LLKAInternal::duplicateString(atom.auth_comp_id);
+        }
+        if (atom.label_asym_id == nullptr) {
+            if (atom.auth_asym_id == nullptr) {
+                atom.auth_asym_id = LLKAInternal::duplicateString("");
+            }
+            atom.label_asym_id = LLKAInternal::duplicateString(atom.auth_asym_id);
+        }
+
+        // Now do the standard fixup where we fill out the auth_ data from label_
+        // data.
+        if (atom.auth_atom_id == nullptr)
+            atom.auth_atom_id = LLKAInternal::duplicateString(atom.label_atom_id);
+        if (atom.auth_comp_id == nullptr)
+            atom.auth_comp_id = LLKAInternal::duplicateString(atom.label_comp_id);
+        if (atom.auth_asym_id == nullptr)
+            atom.auth_asym_id = LLKAInternal::duplicateString(atom.label_asym_id);
+        if (atom.pdbx_PDB_ins_code == nullptr)
+            atom.pdbx_PDB_ins_code = LLKAInternal::duplicateString(LLKA_NO_INSCODE);
+    };
+
+    return LLKAInternal::MiniCif::Applier<LLKAInternal::MiniCif::Categories::AtomSite_AllowBroken>::apply(
+        blocks[0],
+        fixupAtom,
+        [](const LLKA_Atom &atom) { LLKA_destroyAtom(&atom); }
+    );
+}
+
+static
 auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedStru, char **error, int32_t options)
 {
     try {
@@ -191,23 +258,11 @@ auto toStructure(const std::string_view &view, LLKA_ImportedStructure *importedS
             entryId = entries[0].id;
         }
 
-        auto fixupAtom = [](LLKA_Atom &atom) {
-            if (atom.label_asym_id == nullptr)
-                atom.label_asym_id = LLKAInternal::duplicateString("");
-            if (atom.auth_atom_id == nullptr)
-                atom.auth_atom_id = LLKAInternal::duplicateString(atom.label_atom_id);
-            if (atom.auth_comp_id == nullptr)
-                atom.auth_comp_id = LLKAInternal::duplicateString(atom.label_comp_id);
-            if (atom.auth_asym_id == nullptr)
-                atom.auth_asym_id = LLKAInternal::duplicateString(atom.label_asym_id);
-            if (atom.pdbx_PDB_ins_code == nullptr)
-                atom.pdbx_PDB_ins_code = LLKAInternal::duplicateString(LLKA_NO_INSCODE);
-        };
-        auto [ atoms, nAtoms ] = LLKAInternal::MiniCif::Applier<LLKAInternal::MiniCif::Categories::AtomSite>::apply(
-            blocks[0],
-            fixupAtom,
-            [](const LLKA_Atom &atom) { LLKA_destroyAtom(&atom); }
-        );
+        bool allowBrokenAtomSite = options & LLKA_MINICIF_ALLOW_BROKEN_ATOMSITE;
+
+        auto [ atoms, nAtoms ] = allowBrokenAtomSite
+            ? processAtomSiteAllowBroken(blocks)
+            : processAtomSite(blocks);
 
         if (options & LLKA_MINICIF_NORMALIZE)
             LLKAInternal::MiniCif::normalize(atoms, nAtoms);
